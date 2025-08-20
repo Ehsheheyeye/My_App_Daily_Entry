@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Fast Entry</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+
+    <div id="auth-container" class="container">
+        <h1>Login</h1>
+        <form id="login-form">
+            <input type="email" id="login-email" placeholder="Email" required>
+            <input type="password" id="login-password" placeholder="Password" required>
+            <button type="submit">Login</button>
+            <p id="login-error" class="error-message"></p>
+        </form>
+    </div>
+
+    <div id="app-container" class="container" style="display: none;">
+        <header>
+            <h1>Daily Work Entry</h1>
+            <button id="logout-button">Logout</button>
+        </header>
+
+        <main>
+            <section id="entry-section">
+                <h2>Add New Entry</h2>
+                <form id="entry-form">
+                    <div class="form-group">
+                        <label for="entry-date">Select Date:</label>
+                        <input type="date" id="entry-date">
+                    </div>
+                    <div class="form-group">
+                        <label for="party-name">Party Name:</label>
+                        <input type="text" id="party-name" placeholder="Start typing a party name..." list="party-suggestions" autocomplete="off" required>
+                        <datalist id="party-suggestions"></datalist>
+                    </div>
+                    <div class="form-group">
+                        <label for="work-description">Work Description:</label>
+                        <textarea id="work-description" rows="3" placeholder="Enter details of the work..." required></textarea>
+                    </div>
+                    <button type="submit" class="primary-button">Add Entry</button>
+                </form>
+
+                <div class="day-summary">
+                    <h3>Entries for <span id="current-date-display"></span></h3>
+                    <div id="daily-entries-list">
+                        </div>
+                    <button id="submit-day-button" class="action-button" disabled>Submit Day's Entries</button>
+                </div>
+            </section>
+
+            <section id="search-section">
+                <h2>Search Past Entries</h2>
+                <div class="search-controls">
+                    <div class="form-group">
+                        <label for="search-date">Search by Date:</label>
+                        <input type="date" id="search-date">
+                        <button id="search-by-date-button">Search</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="search-party">Search by Party Name:</label>
+                        <input type="text" id="search-party" placeholder="Enter party name..." list="party-suggestions">
+                        <button id="search-by-party-button">Search</button>
+                    </div>
+                </div>
+                <div id="search-results-container">
+                  <h3>Search Results</h3>
+                    <div id="search-results">
+                        <p>Your search results will appear here.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
+    
+    <script src="script.js"></script>
+</body>
+</html>
