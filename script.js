@@ -1,11 +1,11 @@
 // --- PART 1: FIREBASE CONFIGURATION ---
 const firebaseConfig = {
-  apiKey: "AIzaSyAPGOP0ATGHWVbrFAz1IbjOryIfm3NT3hg",
-  authDomain: "fastdataentryapp.firebaseapp.com",
-  projectId: "fastdataentryapp",
-  storageBucket: "fastdataentryapp.firebasestorage.app",
-  messagingSenderId: "31017272526",
-  appId: "1:31017272526:web:c69fb1d863b4ca4a303c9f"
+    apiKey: "AIzaSyAPGOP0ATGHWVbrFAz1IbjOryIfm3NT3hg",
+    authDomain: "fastdataentryapp.firebaseapp.com",
+    projectId: "fastdataentryapp",
+    storageBucket: "fastdataentryapp.firebasestorage.app",
+    messagingSenderId: "31017272526",
+    appId: "1:31017272526:web:c69fb1d863b4ca4a303c9f"
 };
 
 // Initialize Firebase
@@ -13,19 +13,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// --- PART 2: GLOBAL VARIABLES & PARTY NAMES ---
-const partyNames = [
-    "Korus Computer",
-    "Subhadra Industries (MIDC)",
-    "Madhur Food Plaza",
-    "Nice Computers",
-    "Sushila Hospital",
-    "Sai Tutorial",
-    "Prime Graphite E13",
-    "Shreenath Engineering"
-];
-
+// --- PART 2: GLOBAL VARIABLES ---
 let currentUser = null;
+let userPartyListRef = null;
+let partyNames = []; // This will now be fetched from Firestore
 let dailyEntries = []; // Temporarily holds entries for the selected day
 
 // --- PART 3: DOM ELEMENT REFERENCES ---
@@ -45,20 +36,25 @@ const currentDateDisplay = document.getElementById('current-date-display');
 const dailyEntriesList = document.getElementById('daily-entries-list');
 const submitDayButton = document.getElementById('submit-day-button');
 const partySuggestions = document.getElementById('party-suggestions');
+const partySuggestionsSearch = document.getElementById('party-suggestions-search');
 
-const searchDateInput = document.getElementById('search-date');
-const searchByDateButton = document.getElementById('search-by-date-button');
+const searchForm = document.getElementById('search-form');
 const searchPartyInput = document.getElementById('search-party');
-const searchByPartyButton = document.getElementById('search-by-party-button');
+const searchKeywordInput = document.getElementById('search-keyword');
+const searchStartDateInput = document.getElementById('search-start-date');
+const searchEndDateInput = document.getElementById('search-end-date');
+const clearSearchButton = document.getElementById('clear-search-button');
 const searchResultsContainer = document.getElementById('search-results');
 
 // --- PART 4: AUTHENTICATION ---
 auth.onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
+        // Set up a reference to the user's specific party list document
+        userPartyListRef = db.collection('partyLists').doc(currentUser.uid);
         authContainer.style.display = 'none';
         appContainer.style.display = 'block';
-        initialize_app();
+        initializeApp();
     } else {
         currentUser = null;
         authContainer.style.display = 'block';
@@ -81,19 +77,12 @@ logoutButton.addEventListener('click', () => {
 });
 
 // --- PART 5: CORE APP LOGIC ---
-function initialize_app() {
-    // Set default date to today
+function initializeApp() {
     const today = new Date().toISOString().split('T')[0];
     entryDate.value = today;
     currentDateDisplay.textContent = formatDate(today);
-    
-    // Populate party name suggestions
-    partySuggestions.innerHTML = '';
-    partyNames.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        partySuggestions.appendChild(option);
-    });
+    fetchAndPopulatePartyNames();
+    renderDailyEntries(); // Initial render
 }
 
 entryDate.addEventListener('change', () => {
@@ -107,16 +96,21 @@ entryDate.addEventListener('change', () => {
     currentDateDisplay.textContent = formatDate(entryDate.value);
 });
 
-entryForm.addEventListener('submit', (e) => {
+entryForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    const partyName = partyNameInput.value.trim();
+    if (!partyName) return;
+
     const newEntry = {
-        partyName: partyNameInput.value,
+        partyName: partyName,
         description: workDescriptionInput.value,
         date: entryDate.value
     };
     dailyEntries.push(newEntry);
     renderDailyEntries();
+    await addNewPartyNameIfNeeded(partyName); // Save new party name if needed
     entryForm.reset();
+    entryDate.value = newEntry.date; // Keep the date selector on the current date
     partyNameInput.focus();
 });
 
@@ -134,8 +128,7 @@ function renderDailyEntries() {
                 <div class="entry-content">
                     <p class="party-name">${entry.partyName}</p>
                     <p class="description">${entry.description}</p>
-                </div>
-            `;
+                </div>`;
             dailyEntriesList.appendChild(entryElement);
         });
         submitDayButton.disabled = false;
@@ -162,7 +155,7 @@ submitDayButton.addEventListener('click', async () => {
 
     try {
         await batch.commit();
-        alert('Day entries saved successfully! ✅');
+        alert('Day\'s entries saved successfully! ✅');
         generateAndCopyMessage();
         clearDailyEntries();
     } catch (error) {
@@ -174,11 +167,9 @@ submitDayButton.addEventListener('click', async () => {
 function generateAndCopyMessage() {
     const date = formatDate(dailyEntries[0].date);
     let message = `${date}\n\n`;
-
     dailyEntries.forEach((entry, index) => {
         message += `${index + 1}. ${entry.partyName} - ${entry.description}\n`;
     });
-
     message += "\nAll done ✅";
 
     navigator.clipboard.writeText(message).then(() => {
@@ -189,42 +180,107 @@ function generateAndCopyMessage() {
     });
 }
 
-// --- PART 6: SEARCH FUNCTIONALITY ---
-searchByDateButton.addEventListener('click', async () => {
-    const date = searchDateInput.value;
-    if (!date) return;
-    
-    const querySnapshot = await db.collection('entries')
-        .where('userId', '==', currentUser.uid)
-        .where('date', '==', date)
-        .orderBy('timestamp', 'asc')
-        .get();
+// --- PART 6: DYNAMIC PARTY NAME MANAGEMENT ---
+async function fetchAndPopulatePartyNames() {
+    try {
+        const doc = await userPartyListRef.get();
+        if (doc.exists) {
+            partyNames = doc.data().names || [];
+            partyNames.sort((a, b) => a.localeCompare(b)); // Sort alphabetically
+        } else {
+            // If the user has no list, we can pre-populate it with some defaults
+            await userPartyListRef.set({ names: ["Default Party 1", "Default Party 2"] });
+            partyNames = ["Default Party 1", "Default Party 2"];
+        }
+        populateDatalists();
+    } catch (error) {
+        console.error("Error fetching party names:", error);
+    }
+}
 
-    renderSearchResults(querySnapshot.docs, `Results for ${formatDate(date)}`);
-});
+function populateDatalists() {
+    partySuggestions.innerHTML = '';
+    partySuggestionsSearch.innerHTML = '';
+    partyNames.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        partySuggestions.appendChild(option.cloneNode(true));
+        partySuggestionsSearch.appendChild(option);
+    });
+}
 
-searchByPartyButton.addEventListener('click', async () => {
-    const party = searchPartyInput.value;
-    if (!party) return;
+async function addNewPartyNameIfNeeded(newPartyName) {
+    const isNew = !partyNames.some(name => name.toLowerCase() === newPartyName.toLowerCase());
+    if (isNew) {
+        try {
+            await userPartyListRef.update({
+                names: firebase.firestore.FieldValue.arrayUnion(newPartyName)
+            });
+            // Update local list immediately for responsiveness
+            partyNames.push(newPartyName);
+            partyNames.sort((a, b) => a.localeCompare(b));
+            populateDatalists();
+            console.log(`Added new party: ${newPartyName}`);
+        } catch (error) {
+            console.error("Error adding new party name:", error);
+        }
+    }
+}
 
-    const querySnapshot = await db.collection('entries')
-        .where('userId', '==', currentUser.uid)
-        .where('partyName', '==', party)
-        .orderBy('date', 'desc')
-        .get();
+// --- PART 7: ENHANCED SEARCH FUNCTIONALITY ---
+searchForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const party = searchPartyInput.value.trim();
+    const keyword = searchKeywordInput.value.trim().toLowerCase();
+    const startDate = searchStartDateInput.value;
+    const endDate = searchEndDateInput.value;
+
+    searchResultsContainer.innerHTML = '<p>Searching...</p>';
+
+    try {
+        let query = db.collection('entries').where('userId', '==', currentUser.uid);
+
+        // Apply Firestore filters
+        if (party) query = query.where('partyName', '==', party);
+        if (startDate) query = query.where('date', '>=', startDate);
+        if (endDate) query = query.where('date', '<=', endDate);
         
-    renderSearchResults(querySnapshot.docs, `Results for "${party}"`);
+        // Always sort results
+        query = query.orderBy('date', 'desc').orderBy('timestamp', 'desc');
+
+        const querySnapshot = await query.get();
+        let docs = querySnapshot.docs;
+
+        // Apply client-side keyword filter (if provided)
+        if (keyword) {
+            docs = docs.filter(doc => 
+                doc.data().description.toLowerCase().includes(keyword)
+            );
+        }
+
+        renderSearchResults(docs, 'Search Results');
+    } catch (error) {
+        console.error("Search error: ", error);
+        searchResultsContainer.innerHTML = `<p class="error-message">Search failed. You might need to create a Firestore index. Check the console (F12) for a link.</p>`;
+    }
 });
+
+clearSearchButton.addEventListener('click', () => {
+    searchForm.reset();
+    searchResultsContainer.innerHTML = '<p>Use the filters above to search your past entries.</p>';
+});
+
 
 function renderSearchResults(docs, title) {
     searchResultsContainer.innerHTML = '';
     
     const titleEl = document.createElement('h3');
-    titleEl.textContent = title;
+    titleEl.textContent = `${title} (${docs.length} found)`;
     searchResultsContainer.appendChild(titleEl);
 
     if (docs.length === 0) {
-        searchResultsContainer.innerHTML += '<p>No entries found.</p>';
+        searchResultsContainer.innerHTML += '<p>No entries found matching your criteria.</p>';
         return;
     }
 
@@ -246,17 +302,14 @@ function renderSearchResults(docs, title) {
             <div class="entry-content">
                 <p class="party-name">${data.partyName}</p>
                 <p class="description">${data.description}</p>
-            </div>
-        `;
+            </div>`;
         searchResultsContainer.appendChild(entryElement);
     });
 }
 
-// --- PART 7: UTILITY FUNCTIONS ---
+// --- PART 8: UTILITY FUNCTIONS ---
 function formatDate(dateString) {
+    if (!dateString) return 'Invalid Date';
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString + 'T00:00:00').toLocaleDateString('en-GB', options);
 }
-
-// Initialize the app when the script loads
-renderDailyEntries();
