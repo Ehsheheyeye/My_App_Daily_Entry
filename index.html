@@ -24,7 +24,10 @@
     <div id="app-container" class="container" style="display: none;">
         <header>
             <h1>Daily Work Entry</h1>
-            <button id="logout-button">Logout</button>
+            <div class="header-actions">
+                <button id="download-button" class="secondary-button">Download Excel</button>
+                <button id="logout-button">Logout</button>
+            </div>
         </header>
 
         <main>
@@ -49,8 +52,7 @@
 
                 <div class="day-summary">
                     <h3>Entries for <span id="current-date-display"></span></h3>
-                    <div id="daily-entries-list">
-                        </div>
+                    <div id="daily-entries-list"></div>
                     <button id="submit-day-button" class="action-button" disabled>Submit Day's Entries</button>
                 </div>
             </section>
@@ -60,21 +62,17 @@
                 <form id="search-form">
                     <div class="search-grid">
                         <div class="form-group">
-                            <label for="search-party">Party Name</label>
-                            <input type="text" id="search-party" placeholder="Any party" list="party-suggestions-search" autocomplete="off">
-                            <datalist id="party-suggestions-search"></datalist>
+                            <label for="search-date">Search by Specific Date</label>
+                            <input type="date" id="search-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-party">Search by Party Name</label>
+                            <input type="text" id="search-party" placeholder="Enter party name..." list="party-suggestions-search" autocomplete="off">
+                             <datalist id="party-suggestions-search"></datalist>
                         </div>
                         <div class="form-group">
                             <label for="search-keyword">Keyword in Description</label>
                             <input type="text" id="search-keyword" placeholder="e.g., 'repair', 'install'">
-                        </div>
-                        <div class="form-group">
-                            <label for="search-start-date">Start Date</label>
-                            <input type="date" id="search-start-date">
-                        </div>
-                        <div class="form-group">
-                            <label for="search-end-date">End Date</label>
-                            <input type="date" id="search-end-date">
                         </div>
                     </div>
                     <div class="search-actions">
