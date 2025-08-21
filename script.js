@@ -36,13 +36,12 @@ const workDescriptionInput = document.getElementById('work-description');
 const currentDateDisplay = document.getElementById('current-date-display');
 const dailyEntriesList = document.getElementById('daily-entries-list');
 const submitDayButton = document.getElementById('submit-day-button');
-const partySuggestions = document.getElementById('party-suggestions');
-const partySuggestionsSearch = document.getElementById('party-suggestions-search');
+const partySuggestionsBox = document.getElementById('party-suggestions-box');
 
 const searchForm = document.getElementById('search-form');
 const searchDateInput = document.getElementById('search-date');
 const searchPartyInput = document.getElementById('search-party');
-const searchKeywordInput = document.getElementById('search-keyword');
+const searchPartySuggestionsBox = document.getElementById('search-party-suggestions-box');
 const clearSearchButton = document.getElementById('clear-search-button');
 const searchResultsContainer = document.getElementById('search-results');
 
@@ -67,13 +66,14 @@ function initializeApp() {
     currentDateDisplay.textContent = formatDate(today);
     fetchAndPopulatePartyNames();
     renderDailyEntries();
+    // Setup Autocomplete Listeners
+    setupAutocomplete(partyNameInput, partySuggestionsBox);
+    setupAutocomplete(searchPartyInput, searchPartySuggestionsBox);
 }
 
 loginForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    const email = loginEmail.value;
-    const password = loginPassword.value;
-    auth.signInWithEmailAndPassword(email, password).catch(error => {
+    auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value).catch(error => {
         loginError.textContent = error.message;
     });
 });
@@ -82,7 +82,7 @@ logoutButton.addEventListener('click', () => auth.signOut());
 
 // --- PART 5: CORE ENTRY LOGIC ---
 entryDate.addEventListener('change', () => {
-    if (dailyEntries.length > 0 && !confirm("You have unsaved entries. Changing the date will clear them. Continue?")) {
+    if (dailyEntries.length > 0 && !confirm("You have unsaved entries. Changing date will clear them. Continue?")) {
         entryDate.value = dailyEntries[0].date;
         return;
     }
@@ -141,11 +141,7 @@ submitDayButton.addEventListener('click', async () => {
     const batch = db.batch();
     dailyEntries.forEach(entry => {
         const entryRef = db.collection('entries').doc();
-        batch.set(entryRef, {
-            ...entry,
-            userId: currentUser.uid,
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
-        });
+        batch.set(entryRef, { ...entry, userId: currentUser.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
     });
 
     try {
@@ -162,9 +158,7 @@ submitDayButton.addEventListener('click', async () => {
 function generateAndCopyMessage() {
     const date = formatDate(dailyEntries[0].date);
     let message = `${date}\n\n`;
-    dailyEntries.forEach((entry, index) => {
-        message += `${index + 1}. ${entry.partyName} - ${entry.description}\n`;
-    });
+    dailyEntries.forEach((entry, index) => { message += `${index + 1}. ${entry.partyName} - ${entry.description}\n`; });
     message += "\nAll done ✅";
 
     navigator.clipboard.writeText(message).then(() => {
@@ -175,45 +169,66 @@ function generateAndCopyMessage() {
     });
 }
 
-// --- PART 6: DYNAMIC PARTY NAME MANAGEMENT ---
+// --- PART 6: PARTY NAME & AUTOCOMPLETE ---
 async function fetchAndPopulatePartyNames() {
     try {
         const doc = await userPartyListRef.get();
         if (doc.exists && doc.data().names) {
-            partyNames = doc.data().names;
-            partyNames.sort((a, b) => a.localeCompare(b));
+            partyNames = doc.data().names.sort((a, b) => a.localeCompare(b));
         } else {
-            // If the document doesn't exist, create it.
             await userPartyListRef.set({ names: [] });
             partyNames = [];
         }
-        populateDatalists();
     } catch (error) {
         console.error("Error fetching party names:", error);
         alert("Could not load party names. Please check your Firebase Security Rules.");
     }
 }
 
-function populateDatalists() {
-    const optionsHTML = partyNames.map(name => `<option value="${name}"></option>`).join('');
-    partySuggestions.innerHTML = optionsHTML;
-    partySuggestionsSearch.innerHTML = optionsHTML;
-}
-
 async function addNewPartyNameIfNeeded(newPartyName) {
     const isNew = !partyNames.some(name => name.toLowerCase() === newPartyName.toLowerCase());
     if (isNew) {
         try {
-            await userPartyListRef.update({
-                names: firebase.firestore.FieldValue.arrayUnion(newPartyName)
-            });
+            await userPartyListRef.update({ names: firebase.firestore.FieldValue.arrayUnion(newPartyName) });
             partyNames.push(newPartyName);
             partyNames.sort((a, b) => a.localeCompare(b));
-            populateDatalists();
-        } catch (error) {
-            console.error("Error adding new party name:", error);
-        }
+        } catch (error) { console.error("Error adding new party name:", error); }
     }
+}
+
+function setupAutocomplete(inputElement, suggestionsBox) {
+    inputElement.addEventListener('input', () => {
+        const value = inputElement.value.toLowerCase();
+        suggestionsBox.innerHTML = '';
+        if (!value) {
+            suggestionsBox.style.display = 'none';
+            return;
+        }
+
+        const filteredNames = partyNames.filter(name => name.toLowerCase().includes(value));
+        
+        if (filteredNames.length > 0) {
+            filteredNames.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'suggestion-item';
+                item.textContent = name;
+                item.addEventListener('click', () => {
+                    inputElement.value = name;
+                    suggestionsBox.style.display = 'none';
+                });
+                suggestionsBox.appendChild(item);
+            });
+            suggestionsBox.style.display = 'block';
+        } else {
+            suggestionsBox.style.display = 'none';
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!inputElement.contains(e.target)) {
+            suggestionsBox.style.display = 'none';
+        }
+    });
 }
 
 // --- PART 7: SIMPLIFIED SEARCH FUNCTIONALITY ---
@@ -222,10 +237,9 @@ searchForm.addEventListener('submit', async (e) => {
 
     const date = searchDateInput.value;
     const party = searchPartyInput.value.trim();
-    const keyword = searchKeywordInput.value.trim().toLowerCase();
 
-    if (!date && !party && !keyword) {
-        alert("Please enter at least one search filter.");
+    if (!date && !party) {
+        alert("Please select a date or enter a party name to search.");
         return;
     }
 
@@ -240,14 +254,7 @@ searchForm.addEventListener('submit', async (e) => {
         query = query.orderBy('date', 'desc').orderBy('timestamp', 'desc');
 
         const querySnapshot = await query.get();
-        let docs = querySnapshot.docs;
-
-        if (keyword) {
-            docs = docs.filter(doc => 
-                doc.data().description.toLowerCase().includes(keyword)
-            );
-        }
-        renderSearchResults(docs);
+        renderSearchResults(querySnapshot.docs);
     } catch (error) {
         console.error("Search error: ", error);
         searchResultsContainer.innerHTML = `<p class="error-message">Search failed. You MUST create a Firestore index. Check the console (F12) for a link.</p>`;
@@ -261,7 +268,6 @@ clearSearchButton.addEventListener('click', () => {
 
 function renderSearchResults(docs) {
     searchResultsContainer.innerHTML = `<h3>Search Results (${docs.length} found)</h3>`;
-
     if (docs.length === 0) {
         searchResultsContainer.innerHTML += '<p>No entries found matching your criteria.</p>';
         return;
@@ -304,37 +310,31 @@ downloadButton.addEventListener('click', async () => {
             .get();
 
         const entries = querySnapshot.docs.map(doc => doc.data());
-        
         if (entries.length === 0) {
             alert("No entries to download.");
             return;
         }
 
-        // 1. Create CSV Header and Rows
         const headers = ["Date", "Party Name", "Work Description"];
         const rows = entries.map(entry => {
-            // Sanitize data for CSV: wrap in quotes and escape existing quotes
             const date = entry.date;
-            const partyName = `"${entry.partyName.replace(/"/g, '""')}"`;
-            const description = `"${entry.description.replace(/"/g, '""')}"`;
+            const partyName = `"${(entry.partyName || '').replace(/"/g, '""')}"`;
+            const description = `"${(entry.description || '').replace(/"/g, '""')}"`;
             return [date, partyName, description].join(',');
         });
 
         const csvContent = [headers.join(','), ...rows].join('\n');
         
-        // 2. Create a Blob and trigger download
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement("a");
-        if (link.download !== undefined) {
-            const url = URL.createObjectURL(blob);
-            const today = new Date().toISOString().split('T')[0];
-            link.setAttribute("href", url);
-            link.setAttribute("download", `work_entries_${today}.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
+        const url = URL.createObjectURL(blob);
+        const today = new Date().toISOString().split('T')[0];
+        link.setAttribute("href", url);
+        link.setAttribute("download", `work_entries_${today}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
 
     } catch (error) {
         console.error("Download failed:", error);
@@ -344,7 +344,6 @@ downloadButton.addEventListener('click', async () => {
         downloadButton.disabled = false;
     }
 });
-
 
 // --- PART 9: UTILITY FUNCTIONS ---
 function formatDate(dateString) {
