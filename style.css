@@ -72,6 +72,12 @@ header h1 {
     font-weight: 700;
 }
 
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+
 /* --- Forms & Inputs --- */
 form {
     display: flex;
@@ -153,7 +159,16 @@ button.action-button:disabled {
     cursor: not-allowed;
     transform: none;
 }
-#logout-button {
+#logout-button, #clear-search-button {
+    background-color: #e7e7e7;
+    color: var(--primary-color);
+    font-weight: 500;
+}
+#clear-search-button:hover {
+    background-color: #dcdcdc;
+}
+
+.secondary-button {
     background-color: #e7e7e7;
     color: var(--primary-color);
     font-weight: 500;
@@ -176,7 +191,7 @@ section h2 {
     border-bottom: 1px solid var(--border-color);
 }
 
-/* --- Improved Search Form Styles --- */
+/* --- Search Form Styles --- */
 .search-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -192,15 +207,6 @@ section h2 {
 
 #search-button {
     flex-grow: 1; /* Make search button larger */
-}
-
-#clear-search-button {
-    background-color: #e7e7e7;
-    color: var(--text-color);
-}
-
-#clear-search-button:hover {
-    background-color: #dcdcdc;
 }
 
 /* --- Entry & Search Lists --- */
