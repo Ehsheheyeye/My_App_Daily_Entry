@@ -33,15 +33,15 @@
         <main>
             <section id="entry-section">
                 <h2>Add New Entry</h2>
-                <form id="entry-form">
+                <form id="entry-form" autocomplete="off">
                     <div class="form-group">
                         <label for="entry-date">Select Date:</label>
                         <input type="date" id="entry-date">
                     </div>
-                    <div class="form-group">
+                    <div class="form-group autocomplete-container">
                         <label for="party-name">Party Name:</label>
-                        <input type="text" id="party-name" placeholder="Start typing a party name..." list="party-suggestions" autocomplete="off" required>
-                        <datalist id="party-suggestions"></datalist>
+                        <input type="text" id="party-name" placeholder="Start typing a party name..." required>
+                        <div id="party-suggestions-box" class="suggestions-box"></div>
                     </div>
                     <div class="form-group">
                         <label for="work-description">Work Description:</label>
@@ -59,20 +59,16 @@
 
             <section id="search-section">
                 <h2>Search Past Entries</h2>
-                <form id="search-form">
+                <form id="search-form" autocomplete="off">
                     <div class="search-grid">
                         <div class="form-group">
                             <label for="search-date">Search by Specific Date</label>
                             <input type="date" id="search-date">
                         </div>
-                        <div class="form-group">
+                        <div class="form-group autocomplete-container">
                             <label for="search-party">Search by Party Name</label>
-                            <input type="text" id="search-party" placeholder="Enter party name..." list="party-suggestions-search" autocomplete="off">
-                             <datalist id="party-suggestions-search"></datalist>
-                        </div>
-                        <div class="form-group">
-                            <label for="search-keyword">Keyword in Description</label>
-                            <input type="text" id="search-keyword" placeholder="e.g., 'repair', 'install'">
+                            <input type="text" id="search-party" placeholder="Start typing a party name...">
+                             <div id="search-party-suggestions-box" class="suggestions-box"></div>
                         </div>
                     </div>
                     <div class="search-actions">
