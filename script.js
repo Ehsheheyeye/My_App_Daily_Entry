@@ -205,6 +205,8 @@ function setupAutocomplete(inputElement, suggestionsBox) {
             return;
         }
 
+        // This filters the list to show any name that INCLUDES the letters you type.
+        // This is the "contains" search you wanted.
         const filteredNames = partyNames.filter(name => name.toLowerCase().includes(value));
         
         if (filteredNames.length > 0) {
@@ -317,10 +319,21 @@ downloadButton.addEventListener('click', async () => {
 
         const headers = ["Date", "Party Name", "Work Description"];
         const rows = entries.map(entry => {
-            const date = entry.date;
+            // **FIXED**: Safely handle missing dates and reformat to DD-MM-YYYY
+            const rawDate = entry.date; // e.g., "2025-08-21"
+            let formattedDate = 'N/A'; // Default value if date is missing
+            if (rawDate) {
+                const parts = rawDate.split('-');
+                if (parts.length === 3) {
+                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                } else {
+                    formattedDate = rawDate; // Fallback to original if format is not YYYY-MM-DD
+                }
+            }
+            
             const partyName = `"${(entry.partyName || '').replace(/"/g, '""')}"`;
             const description = `"${(entry.description || '').replace(/"/g, '""')}"`;
-            return [date, partyName, description].join(',');
+            return [formattedDate, partyName, description].join(',');
         });
 
         const csvContent = [headers.join(','), ...rows].join('\n');
