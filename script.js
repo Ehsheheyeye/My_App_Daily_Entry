@@ -170,14 +170,20 @@ function generateAndCopyMessage() {
 }
 
 // --- PART 6: PARTY NAME & AUTOCOMPLETE ---
+// --- MODIFIED --- Added a default list of party names for new users.
 async function fetchAndPopulatePartyNames() {
     try {
         const doc = await userPartyListRef.get();
-        if (doc.exists && doc.data().names) {
+        if (doc.exists && doc.data().names && doc.data().names.length > 0) {
             partyNames = doc.data().names.sort((a, b) => a.localeCompare(b));
         } else {
-            await userPartyListRef.set({ names: [] });
-            partyNames = [];
+            // If no list exists in Firebase, create one with your examples.
+            const defaultPartyNames = [
+                "Korus Computers", "Rahul sir", "Nitin Garage",
+                "Prime Graphite", "Shreenath Engineering", "Slidewell A6"
+            ];
+            await userPartyListRef.set({ names: defaultPartyNames });
+            partyNames = defaultPartyNames.sort((a, b) => a.localeCompare(b));
         }
     } catch (error) {
         console.error("Error fetching party names:", error);
@@ -196,6 +202,7 @@ async function addNewPartyNameIfNeeded(newPartyName) {
     }
 }
 
+// --- MODIFIED --- Improved the suggestion logic for faster entry.
 function setupAutocomplete(inputElement, suggestionsBox) {
     inputElement.addEventListener('input', () => {
         const value = inputElement.value.toLowerCase();
@@ -205,9 +212,13 @@ function setupAutocomplete(inputElement, suggestionsBox) {
             return;
         }
 
-        // This filters the list to show any name that INCLUDES the letters you type.
-        // This is the "contains" search you wanted.
-        const filteredNames = partyNames.filter(name => name.toLowerCase().includes(value));
+        // --- NEW, IMPROVED LOGIC ---
+        // 1. Find names that START WITH the input
+        const startsWith = partyNames.filter(name => name.toLowerCase().startsWith(value));
+        // 2. Find names that INCLUDE the input (but don't start with it)
+        const includes = partyNames.filter(name => !name.toLowerCase().startsWith(value) && name.toLowerCase().includes(value));
+        // 3. Combine them, so the "starts with" matches appear first for relevance.
+        const filteredNames = [...startsWith, ...includes];
         
         if (filteredNames.length > 0) {
             filteredNames.forEach(name => {
@@ -226,12 +237,14 @@ function setupAutocomplete(inputElement, suggestionsBox) {
         }
     });
 
+    // Hides the suggestion box when clicking anywhere else on the page
     document.addEventListener('click', (e) => {
         if (!inputElement.contains(e.target)) {
             suggestionsBox.style.display = 'none';
         }
     });
 }
+
 
 // --- PART 7: SIMPLIFIED SEARCH FUNCTIONALITY ---
 searchForm.addEventListener('submit', async (e) => {
@@ -319,15 +332,14 @@ downloadButton.addEventListener('click', async () => {
 
         const headers = ["Date", "Party Name", "Work Description"];
         const rows = entries.map(entry => {
-            // **FIXED**: Safely handle missing dates and reformat to DD-MM-YYYY
             const rawDate = entry.date; // e.g., "2025-08-21"
-            let formattedDate = 'N/A'; // Default value if date is missing
+            let formattedDate = 'N/A';
             if (rawDate) {
                 const parts = rawDate.split('-');
                 if (parts.length === 3) {
-                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    formattedDate = `${parts[2]}-${parts[1]}-${parts[0]}`; // DD-MM-YYYY
                 } else {
-                    formattedDate = rawDate; // Fallback to original if format is not YYYY-MM-DD
+                    formattedDate = rawDate;
                 }
             }
             
