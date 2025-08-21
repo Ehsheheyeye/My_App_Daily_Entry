@@ -178,16 +178,15 @@ async function fetchAndPopulatePartyNames() {
             partyNames = doc.data().names.sort((a, b) => a.localeCompare(b));
         } else {
             // If no list exists in Firebase, create one with your examples.
-            const defaultPartyNames = [
-                "Korus Computer", "Hotel Sai Lila", "MHB Colony", "Moule Petroleum", "Madhur Food Plaza", "Subhadra Industries (MIDC)", 
-                "Aggarwal's Home", "SR Enterprises", "Rx Service Centre", "DCC", "DSK", "Ravi Raka", "Chip Com Traders", "Rahul Sir",
-                "Adarsh Computer", "Kuber Petroleum", "Nate", "Shree Enterprises", "Nice Computers", "Sushila Hospital", "Sai Tutorial", 
-                "Prime Graphite E13", "Shreenath Engineering", "Sankalp Hospital", "Plot", "Hotel Curry Leaves Accounts", "Audio Video Care",
-                "Lapcare Service Centre", "Gadiwale", "SBI Ashok Nagar", "Sanskriti Hotel", "Slidewell A6", "Deore Sir Typing", "Hotel BLVD", "Morden School",
-                "Great Eastern", "Mahalaxmi Pathswantha", "ACME IT Solutions", "Viraj Enterprises", "Hotel Sanskruti Accounts", "Fins Solutions", "San Infotech", 
-                "Orbital System", "Hotel Curry Leaves Jehan", "Papaya Nursery", "Abhay Products", "Hotel Curry Leaves Bhavan", "Parshwa", "Rashi Peripherals"
-
-            ];
+           const defaultPartyNames = [
+    "Korus Computer", "Hotel Sai Lila", "MHB Colony", "Moule Petroleum", "Madhur Food Plaza", "Subhadra Industries (MIDC)",
+    "Aggarwal's Home", "SR Enterprises", "Rx Service Centre", "DCC", "DSK", "Ravi Raka", "Chip Com Traders", "Rahul Sir",
+    "Adarsh Computer", "Kuber Petroleum", "Nate", "Shree Enterprises", "Nice Computers", "Sushila Hospital", "Sai Tutorial",
+    "Prime Graphite E13", "Shreenath Engineering", "Sankalp Hospital", "Plot", "Hotel Curry Leaves Accounts", "Audio Video Care",
+    "Lapcare Service Centre", "Gadiwale", "SBI Ashok Nagar", "Sanskriti Hotel", "Slidewell A6", "Deore Sir Typing", "Hotel BLVD", "Morden School",
+    "Great Eastern", "Mahalaxmi Pathswantha", "ACME IT Solutions", "Viraj Enterprises", "Hotel Sanskruti Accounts", "Fins Solutions", "San Infotech",
+    "Orbital System", "Hotel Curry Leaves Jehan", "Papaya Nursery", "Abhay Products", "Hotel Curry Leaves Bhavan", "Parshwa", "Rashi Peripherals"
+];
             await userPartyListRef.set({ names: defaultPartyNames });
             partyNames = defaultPartyNames.sort((a, b) => a.localeCompare(b));
         }
@@ -382,4 +381,5 @@ function formatDate(dateString) {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString + 'T00:00:00').toLocaleDateString('en-GB', options);
 }
+
 
