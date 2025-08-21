@@ -57,22 +57,35 @@
 
             <section id="search-section">
                 <h2>Search Past Entries</h2>
-                <div class="search-controls">
-                    <div class="form-group">
-                        <label for="search-date">Search by Date:</label>
-                        <input type="date" id="search-date">
-                        <button id="search-by-date-button">Search</button>
+                <form id="search-form">
+                    <div class="search-grid">
+                        <div class="form-group">
+                            <label for="search-party">Party Name</label>
+                            <input type="text" id="search-party" placeholder="Any party" list="party-suggestions-search" autocomplete="off">
+                            <datalist id="party-suggestions-search"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="search-keyword">Keyword in Description</label>
+                            <input type="text" id="search-keyword" placeholder="e.g., 'repair', 'install'">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-start-date">Start Date</label>
+                            <input type="date" id="search-start-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="search-end-date">End Date</label>
+                            <input type="date" id="search-end-date">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label for="search-party">Search by Party Name:</label>
-                        <input type="text" id="search-party" placeholder="Enter party name..." list="party-suggestions">
-                        <button id="search-by-party-button">Search</button>
+                    <div class="search-actions">
+                         <button type="submit" id="search-button">Search Entries</button>
+                         <button type="button" id="clear-search-button">Clear Filters</button>
                     </div>
-                </div>
+                </form>
                 <div id="search-results-container">
-                  <h3>Search Results</h3>
+                    <h3>Search Results</h3>
                     <div id="search-results">
-                        <p>Your search results will appear here.</p>
+                        <p>Use the filters above to search your past entries.</p>
                     </div>
                 </div>
             </section>
